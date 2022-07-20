@@ -16,12 +16,13 @@ EXPORT_SCENE=export-scene.py
 DIST=../dist
 
 all : \
-	$(DIST)/hexapod.pnct \
-	$(DIST)/hexapod.scene \
+	$(DIST)/scene_op \
+	$(DIST)/pnct_op \
 
+INPUTFILE=ambulance
 
-$(DIST)/hexapod.scene : hexapod.blend $(EXPORT_SCENE)
-	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Main '$@'
+$(DIST)/scene_op :
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- $(INPUTFILE).blend $(DIST)/$(INPUTFILE).scene
 
-$(DIST)/hexapod.pnct : hexapod.blend $(EXPORT_MESHES)
-	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Main '$@'
+$(DIST)/pnct_op :
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- $(INPUTFILE).blend $(DIST)/$(INPUTFILE).pnct
