@@ -13,15 +13,15 @@
 #include <random>
 
 GLuint program = 0;
-Load<MeshBuffer> hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const* {
+Load<MeshBuffer> meshes(LoadTagDefault, []() -> MeshBuffer const* {
     MeshBuffer const* ret = new MeshBuffer(data_path("ambulance.pnct"));
     program = ret->make_vao_for_program(lit_color_texture_program->program);
     return ret;
 });
 
-Load<Scene> hexapod_scene(LoadTagDefault, []() -> Scene const* {
+Load<Scene> environment_scene(LoadTagDefault, []() -> Scene const* {
     return new Scene(data_path("ambulance.scene"), [&](Scene& scene, Scene::Transform* transform, std::string const& mesh_name) {
-        Mesh const& mesh = hexapod_meshes->lookup(mesh_name);
+        Mesh const& mesh = meshes->lookup(mesh_name);
 
         scene.drawables.emplace_back(transform);
         Scene::Drawable& drawable = scene.drawables.back();
@@ -36,23 +36,9 @@ Load<Scene> hexapod_scene(LoadTagDefault, []() -> Scene const* {
 });
 
 PlayMode::PlayMode()
-    : scene(*hexapod_scene)
+    : scene(*environment_scene)
 {
-    // get pointers to leg for convenience:
-    for (auto& transform : scene.transforms) {
-        std::cout << "GOT: " << transform.name << std::endl;
-        if (transform.name == "body")
-            body = &transform;
-        else if (transform.name == "wheel_frontLeft")
-            front_left_wheel = &transform;
-    }
-    if (body == nullptr)
-        throw std::runtime_error("body not found.");
-    if (front_left_wheel == nullptr)
-        throw std::runtime_error("wheel not found.");
-
-    body_rotation = body->rotation;
-    front_left_wheel_rotation = front_left_wheel->rotation;
+    ambulance.initialize_with_scene(scene);
 
     // get pointer to camera for convenience:
     if (scene.cameras.size() != 1)
@@ -126,13 +112,9 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 void PlayMode::update(float elapsed)
 {
 
-    // slowly rotates through [0,1):
-    wobble += elapsed / 10.0f;
-    wobble -= std::floor(wobble);
-
-    body->rotation = body_rotation * glm::angleAxis(glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
-    front_left_wheel->rotation = front_left_wheel_rotation * glm::angleAxis(glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))), glm::vec3(0.0f, 0.0f, 1.0f));
-
+    ambulance.chassis->rotation *= glm::angleAxis(0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+    ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    // ambulance.chassis->position += glm::vec3(1.f, 0.f, 0.f);
     // move camera:
     {
 
