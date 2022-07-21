@@ -28,12 +28,12 @@ struct FourWheeledVehicle : AssetMesh {
         components["wheel_backRight"] = &wheel_BR;
     }
 
-    void initialize_from_scene(Scene& scene)
+    void initialize_from_scene(Scene& scene, const std::string& name)
     {
         assert(scene.transforms.size() > 0);
 
         // add components to the global dictionary
-        initialize_components(scene.transforms.front().name);
+        initialize_components(name);
 
         // get pointers to scene components for convenience:
         for (auto& s : components) {

@@ -15,13 +15,13 @@
 
 GLuint program = 0;
 Load<MeshBuffer> load_meshes(LoadTagDefault, []() -> MeshBuffer const* {
-    MeshBuffer const* ret = new MeshBuffer(data_path("ambulance.pnct"));
+    MeshBuffer const* ret = new MeshBuffer(data_path("world.pnct"));
     program = ret->make_vao_for_program(lit_color_texture_program->program);
     return ret;
 });
 
 Load<Scene> load_scene(LoadTagDefault, []() -> Scene const* {
-    return new Scene(data_path("ambulance.scene"), [&](Scene& scene, Scene::Transform* transform, std::string const& mesh_name) {
+    return new Scene(data_path("world.scene"), [&](Scene& scene, Scene::Transform* transform, std::string const& mesh_name) {
         Mesh const& mesh = load_meshes->lookup(mesh_name);
 
         scene.drawables.emplace_back(transform);
@@ -39,7 +39,7 @@ Load<Scene> load_scene(LoadTagDefault, []() -> Scene const* {
 PlayMode::PlayMode()
     : scene(*load_scene)
 {
-    ambulance.initialize_from_scene(scene);
+    ambulance.initialize_from_scene(scene, "ambulance");
 
     // get pointer to camera for convenience:
     if (scene.cameras.size() != 1)

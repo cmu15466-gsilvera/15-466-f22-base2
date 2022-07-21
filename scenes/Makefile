@@ -19,7 +19,7 @@ all : \
 	$(DIST)/scene_op \
 	$(DIST)/pnct_op \
 
-INPUTFILE=ambulance
+INPUTFILE=world
 
 $(DIST)/scene_op :
 	$(BLENDER) --background --python $(EXPORT_SCENE) -- $(INPUTFILE).blend $(DIST)/$(INPUTFILE).scene
