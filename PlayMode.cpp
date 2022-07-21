@@ -9,19 +9,20 @@
 #include "gl_errors.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <random>
 
 GLuint program = 0;
-Load<MeshBuffer> meshes(LoadTagDefault, []() -> MeshBuffer const* {
+Load<MeshBuffer> load_meshes(LoadTagDefault, []() -> MeshBuffer const* {
     MeshBuffer const* ret = new MeshBuffer(data_path("ambulance.pnct"));
     program = ret->make_vao_for_program(lit_color_texture_program->program);
     return ret;
 });
 
-Load<Scene> environment_scene(LoadTagDefault, []() -> Scene const* {
+Load<Scene> load_scene(LoadTagDefault, []() -> Scene const* {
     return new Scene(data_path("ambulance.scene"), [&](Scene& scene, Scene::Transform* transform, std::string const& mesh_name) {
-        Mesh const& mesh = meshes->lookup(mesh_name);
+        Mesh const& mesh = load_meshes->lookup(mesh_name);
 
         scene.drawables.emplace_back(transform);
         Scene::Drawable& drawable = scene.drawables.back();
@@ -36,14 +37,23 @@ Load<Scene> environment_scene(LoadTagDefault, []() -> Scene const* {
 });
 
 PlayMode::PlayMode()
-    : scene(*environment_scene)
+    : scene(*load_scene)
 {
-    ambulance.initialize_with_scene(scene);
+    ambulance.initialize_from_scene(scene);
 
     // get pointer to camera for convenience:
     if (scene.cameras.size() != 1)
         throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
     camera = &scene.cameras.front();
+    std::cout << glm::to_string(camera->transform->position) << std::endl;
+    std::cout << glm::to_string(camera->transform->rotation) << std::endl;
+    camera->transform->position = glm::vec3(0, -5, 10);
+    camera->transform->rotation = glm::quat(-0.961504, { -0.256248, 0.030255, -0.094502 });
+    // camera->transform->rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0));
+    // glm::vec3 dir = glm::vec3(0, 0, 0) - camera->transform->position;
+    // dir /= dir.length(); // normalized
+    // std::cout << glm::to_string(dir) << std::endl;
+    // camera->transform->rotation = glm::quatLookAt(dir, glm::vec3(0, 1, 0));
 }
 
 PlayMode::~PlayMode()
@@ -112,9 +122,17 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 void PlayMode::update(float elapsed)
 {
 
-    ambulance.chassis->rotation *= glm::angleAxis(0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+    woggle += 2 * elapsed;
+    woggle -= std::floor(woggle);
+
+    ambulance.chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
     ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-    // ambulance.chassis->position += glm::vec3(1.f, 0.f, 0.f);
+    ambulance.wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    ambulance.wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    ambulance.wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // camera->transform->rotation *= glm::quat(glm::vec3(glm::radians(1, 0, 0));
+    ambulance.all->rotation *= glm::quat(glm::vec3(0, 0, glm::radians(1.f)));
     // move camera:
     {
 

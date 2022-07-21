@@ -16,10 +16,11 @@ struct AssetMesh {
 
 struct FourWheeledVehicle : AssetMesh {
 
-    Scene::Transform *chassis, *wheel_FL, *wheel_FR, *wheel_BL, *wheel_BR;
+    Scene::Transform *all, *chassis, *wheel_FL, *wheel_FR, *wheel_BL, *wheel_BR;
 
-    void initialize_components()
+    void initialize_components(const std::string& name)
     {
+        components[name] = &all;
         components["body"] = &chassis;
         components["wheel_frontLeft"] = &wheel_FL;
         components["wheel_frontRight"] = &wheel_FR;
@@ -27,10 +28,12 @@ struct FourWheeledVehicle : AssetMesh {
         components["wheel_backRight"] = &wheel_BR;
     }
 
-    void initialize_with_scene(Scene& scene)
+    void initialize_from_scene(Scene& scene)
     {
+        assert(scene.transforms.size() > 0);
+
         // add components to the global dictionary
-        initialize_components();
+        initialize_components(scene.transforms.front().name);
 
         // get pointers to scene components for convenience:
         for (auto& s : components) {
@@ -41,9 +44,14 @@ struct FourWheeledVehicle : AssetMesh {
                     (*s.second) = &transform;
                 }
             }
-            if (s.second == nullptr)
+            if ((*s.second) == nullptr)
                 throw std::runtime_error("Unable to find \"" + key + "\" in scene!");
         }
+
+        assert(all != nullptr);
+        all->position = glm::vec3(0, 0, 0);
+        all->rotation = glm::identity<glm::quat>();
+        all->scale = glm::vec3(1, 1, 1);
     }
 
     // glm::quat body_rotation;
@@ -73,6 +81,7 @@ struct PlayMode : Mode {
     Scene scene;
 
     FourWheeledVehicle ambulance;
+    float woggle = 0;
 
     // camera:
     Scene::Camera* camera = nullptr;
