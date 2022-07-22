@@ -88,17 +88,6 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         all->scale = glm::vec3(1, 1, 1);
     }
 
-    float normalize_angle_rad(float angle) const
-    {
-        float delta = 0.f;
-        if (angle > M_PI) {
-            delta = -2.f * M_PI;
-        } else if (angle < -M_PI) {
-            delta = 2.f * M_PI;
-        }
-        return angle + delta;
-    }
-
     void update(const float dt)
     {
         // inspiration for this physics update was taken from this code:
@@ -111,13 +100,17 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
 
         // compute forward speed
         float speed = velocity_sign * glm::length(vel);
-        speed = speed + dt * (10.f * throttle - 5.f * brake);
+        speed = speed + dt * (throttle_force * throttle - brake_force * brake);
+
+        // compute friction
         float friction = speed * (c_r + c_a * speed);
         speed -= dt * glm::sign(speed) * friction; // apply friction
+
+        // apply speed to velocity
         vel = speed * heading;
 
-        // Compute the angular velocity
-        rotvel = (speed * glm::tan(steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
+        // compute angular velocity (only along yaw)
+        rotvel = (speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
 
         // finally perform the physics update
         PhysicalAssetMesh::update(dt);
@@ -125,10 +118,17 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         all->rotation = glm::quat(rot); // euler to Quat!
     }
 
+    // how strong these effects get scaled
+    float throttle_force = 10.f;
+    float brake_force = 5.f; // brake or reverse?
+    float steer_force = 1.f;
+
+    // constants
     float wheel_diameter_m = 1.0f;
     float c_r = 0.1f; // coefficient of resistance
     float c_a = 0.9f; // coefficient of aerodynamics
 
+    // throttle and brake are between 0..1, steer is between -PI..PI
     float throttle = 0.f, brake = 0.f, steer = 0.f;
 };
 

@@ -134,11 +134,13 @@ void PlayMode::update(float elapsed)
     {
         // combine inputs into a move:
         if (left.pressed || right.pressed) {
+            const float wheel_turn_rate = 0.5f; // how many radians per second are turned
             if (left.pressed && !right.pressed)
-                ambulance.steer = std::min(float(M_PI / 4), ambulance.steer + elapsed * 0.5f);
+                ambulance.steer = std::min(float(M_PI / 4), ambulance.steer + elapsed * wheel_turn_rate);
             if (!left.pressed && right.pressed)
-                ambulance.steer = std::max(float(-M_PI / 4), ambulance.steer - elapsed * 0.5f);
+                ambulance.steer = std::max(float(-M_PI / 4), ambulance.steer - elapsed * wheel_turn_rate);
         } else {
+            // force feedback return steering wheel to 0
             ambulance.steer += elapsed * 2.f * (0 - ambulance.steer);
         }
         if (up.pressed || down.pressed) {
