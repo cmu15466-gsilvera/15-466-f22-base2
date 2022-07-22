@@ -120,37 +120,38 @@ void PlayMode::update(float elapsed)
     if (ambulance.throttle > 0) {
         ambulance.chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
     }
-    ambulance.wheel_FL->rotation = glm::angleAxis(glm::radians(ambulance.wheel_heading - WHEEL_ZERO), glm::vec3(0, 0, 1));
-    ambulance.wheel_FR->rotation = glm::angleAxis(glm::radians(ambulance.wheel_heading - WHEEL_ZERO), glm::vec3(0, 0, 1));
+    ambulance.wheel_FL->rotation = glm::angleAxis(ambulance.steer_angle, glm::vec3(0, 0, 1));
+    ambulance.wheel_FR->rotation = glm::angleAxis(float(M_PI + ambulance.steer_angle), glm::vec3(0, 0, 1));
 
+    // wheel rotation (stretch)
     // ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
     // ambulance.wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    // ambulance.wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    // ambulance.wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
 
-    ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-    ambulance.wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-    ambulance.wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-    ambulance.wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-
-    // camera->transform->rotation *= glm::quat(glm::vec3(glm::radians(1, 0, 0));
-    // ambulance.all->rotation *= glm::quat(glm::vec3(0, 0, glm::radians(1.f)));
     ambulance.update(elapsed);
 
     {
         // combine inputs into a move:
         if (left.pressed || right.pressed) {
             if (left.pressed && !right.pressed)
-                ambulance.wheel_heading = std::min(WHEEL_ZERO + 45.f, ambulance.wheel_heading + elapsed * 200);
+                ambulance.steer_angle = std::min(float(M_PI / 4), ambulance.steer_angle + elapsed * 0.5f);
             if (!left.pressed && right.pressed)
-                ambulance.wheel_heading = std::max(45.f, ambulance.wheel_heading - elapsed * 200);
+                ambulance.steer_angle = std::max(float(-M_PI / 4), ambulance.steer_angle - elapsed * 0.5f);
         } else {
-            ambulance.wheel_heading += elapsed * 2.f * (WHEEL_ZERO - ambulance.wheel_heading);
+            ambulance.steer_angle += elapsed * 2.f * (0 - ambulance.steer_angle);
         }
-        if (down.pressed && !up.pressed) {
+        if (up.pressed || down.pressed) {
+            if (down.pressed && !up.pressed) {
+                ambulance.throttle = 0;
+                ambulance.brake = 1;
+            }
+            if (!down.pressed && up.pressed) {
+                ambulance.throttle = 1;
+                ambulance.brake = 0;
+            }
+        } else {
             ambulance.throttle = 0;
-            ambulance.brake = 1;
-        }
-        if (!down.pressed && up.pressed) {
-            ambulance.throttle = 1;
             ambulance.brake = 0;
         }
         camera->transform->position = ambulance.pos + glm::vec3(0, -15, 15);

@@ -40,7 +40,6 @@ struct PhysicalAssetMesh : AssetMesh {
     }
 };
 
-#define WHEEL_ZERO 90 // 90 degrees is the "zero" angle for the tires
 struct FourWheeledVehicle : PhysicalAssetMesh {
 
     FourWheeledVehicle()
@@ -86,25 +85,54 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         all->scale = glm::vec3(1, 1, 1);
     }
 
+    float normalize_angle_rad(float angle) const
+    {
+        float delta = 0.f;
+        if (angle > M_PI) {
+            delta = -2.f * M_PI;
+        } else if (yaw < -M_PI) {
+            delta = 2.f * M_PI;
+        }
+        return angle + delta;
+    }
+
     void update(const float dt)
     {
 
-        float heading_x = glm::cos(glm::radians(wheel_heading));
-        float heading_y = glm::sin(glm::radians(wheel_heading));
-        /// TODO: vertical accel? gravity?
-        glm::vec3 heading = glm::vec3(heading_x, heading_y, 0);
+        // float heading_x = glm::cos(steer_angle);
+        // float heading_y = glm::sin(steer_angle);
+        // /// TODO: vertical accel? gravity?
+        // glm::vec3 heading = glm::vec3(heading_x, heading_y, 0);
 
-        accel = 10.f * heading * throttle - 20.f * heading * brake;
+        // Compute the local velocity in the x-axis
+        float friction = speed * (c_r + c_a * speed);
+        speed = speed + dt * (10.f * throttle - 5.f * brake);
+        speed -= dt * glm::sign(speed) * friction; // apply friction
+
+        // Compute the angular velocity
+        float angular_vel = speed * glm::tan(steer_angle) / wheel_diameter_m;
+
+        // Compute the final state using the discrete time model
+        pos += speed * dt * glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+        yaw = normalize_angle_rad(yaw + angular_vel * dt);
 
         // finally perform the physics update
-        PhysicalAssetMesh::update(dt);
+        // PhysicalAssetMesh::update(dt);
         all->position = pos;
-        all->rotation = rot;
+        all->rotation = glm::angleAxis(float(yaw - yaw0), glm::vec3(0.0f, 0.0f, 1.0f));
     }
 
-    float wheel_heading = 90.f; // in degrees
+    float wheel_diameter_m = 1.0f;
+    float c_r = 0.1f; // coefficient of resistance
+    float c_a = 0.9f; // coefficient of aerodynamics
 
-    float throttle = 0, brake = 0, steer = 0;
+    float speed = 0; // m/s
+    float steer_angle = 0.f; // in radians
+
+    float yaw = M_PI / 2; // global heading (radians)
+    float yaw0 = M_PI / 2; // initial heading (radians)
+
+    float throttle = 0, brake = 0;
 };
 
 struct PlayMode : Mode {
