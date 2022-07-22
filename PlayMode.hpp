@@ -98,26 +98,30 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
 
     void update(const float dt)
     {
+        // inspiration for this physics update was taken from this code:
+        // https://github.com/winstxnhdw/KinematicBicycleModel
 
-        // float heading_x = glm::cos(steer_angle);
-        // float heading_y = glm::sin(steer_angle);
-        // /// TODO: vertical accel? gravity?
-        // glm::vec3 heading = glm::vec3(heading_x, heading_y, 0);
+        // create 3D velocity vector
 
-        // Compute the local velocity in the x-axis
-        float friction = speed * (c_r + c_a * speed);
+        glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+        int velocity_sign = glm::sign(glm::dot(vel, heading));
+
+        // compute forward speed
+        float speed = velocity_sign * glm::length(vel);
         speed = speed + dt * (10.f * throttle - 5.f * brake);
+        float friction = speed * (c_r + c_a * speed);
         speed -= dt * glm::sign(speed) * friction; // apply friction
+
+        vel = speed * heading;
 
         // Compute the angular velocity
         float angular_vel = speed * glm::tan(steer_angle) / wheel_diameter_m;
 
-        // Compute the final state using the discrete time model
-        pos += speed * dt * glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+        // compute the global yaw direction
         yaw = normalize_angle_rad(yaw + angular_vel * dt);
 
         // finally perform the physics update
-        // PhysicalAssetMesh::update(dt);
+        PhysicalAssetMesh::update(dt);
         all->position = pos;
         all->rotation = glm::angleAxis(float(yaw - yaw0), glm::vec3(0.0f, 0.0f, 1.0f));
     }
