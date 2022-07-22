@@ -40,20 +40,12 @@ PlayMode::PlayMode()
     : scene(*load_scene)
 {
     ambulance.initialize_from_scene(scene, "ambulance");
+    // ambulance.wheel_FL->position += glm::vec3(3, 0, 0);
 
     // get pointer to camera for convenience:
     if (scene.cameras.size() != 1)
         throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
     camera = &scene.cameras.front();
-    std::cout << glm::to_string(camera->transform->position) << std::endl;
-    std::cout << glm::to_string(camera->transform->rotation) << std::endl;
-    camera->transform->position = glm::vec3(0, -5, 10);
-    camera->transform->rotation = glm::quat(-0.961504, { -0.256248, 0.030255, -0.094502 });
-    // camera->transform->rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0, 0));
-    // glm::vec3 dir = glm::vec3(0, 0, 0) - camera->transform->position;
-    // dir /= dir.length(); // normalized
-    // std::cout << glm::to_string(dir) << std::endl;
-    // camera->transform->rotation = glm::quatLookAt(dir, glm::vec3(0, 1, 0));
 }
 
 PlayMode::~PlayMode()
@@ -125,39 +117,54 @@ void PlayMode::update(float elapsed)
     woggle += 2 * elapsed;
     woggle -= std::floor(woggle);
 
-    ambulance.chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
+    if (ambulance.throttle > 0) {
+        ambulance.chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+    ambulance.wheel_FL->rotation = glm::angleAxis(glm::radians(ambulance.wheel_heading - WHEEL_ZERO), glm::vec3(0, 0, 1));
+    ambulance.wheel_FR->rotation = glm::angleAxis(glm::radians(ambulance.wheel_heading - WHEEL_ZERO), glm::vec3(0, 0, 1));
+
+    // ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+    // ambulance.wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+
     ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
     ambulance.wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
     ambulance.wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
     ambulance.wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
 
     // camera->transform->rotation *= glm::quat(glm::vec3(glm::radians(1, 0, 0));
-    ambulance.all->rotation *= glm::quat(glm::vec3(0, 0, glm::radians(1.f)));
+    // ambulance.all->rotation *= glm::quat(glm::vec3(0, 0, glm::radians(1.f)));
+    ambulance.update(elapsed);
+
+    {
+        // combine inputs into a move:
+        if (left.pressed || right.pressed) {
+            if (left.pressed && !right.pressed)
+                ambulance.wheel_heading = std::min(WHEEL_ZERO + 45.f, ambulance.wheel_heading + elapsed * 200);
+            if (!left.pressed && right.pressed)
+                ambulance.wheel_heading = std::max(45.f, ambulance.wheel_heading - elapsed * 200);
+        } else {
+            ambulance.wheel_heading += elapsed * 2.f * (WHEEL_ZERO - ambulance.wheel_heading);
+        }
+        if (down.pressed && !up.pressed) {
+            ambulance.throttle = 0;
+            ambulance.brake = 1;
+        }
+        if (!down.pressed && up.pressed) {
+            ambulance.throttle = 1;
+            ambulance.brake = 0;
+        }
+        camera->transform->position = ambulance.pos + glm::vec3(0, -15, 15);
+    }
+
     // move camera:
     {
 
-        // combine inputs into a move:
-        constexpr float PlayerSpeed = 30.0f;
-        glm::vec2 move = glm::vec2(0.0f);
-        if (left.pressed && !right.pressed)
-            move.x = -1.0f;
-        if (!left.pressed && right.pressed)
-            move.x = 1.0f;
-        if (down.pressed && !up.pressed)
-            move.y = -1.0f;
-        if (!down.pressed && up.pressed)
-            move.y = 1.0f;
+        // glm::mat4x3 frame = camera->transform->make_local_to_parent();
+        // glm::vec3 right = frame[0];
+        // // glm::vec3 up = frame[1];
+        // glm::vec3 forward = -frame[2];
 
-        // make it so that moving diagonally doesn't go faster:
-        if (move != glm::vec2(0.0f))
-            move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-        glm::mat4x3 frame = camera->transform->make_local_to_parent();
-        glm::vec3 right = frame[0];
-        // glm::vec3 up = frame[1];
-        glm::vec3 forward = -frame[2];
-
-        camera->transform->position += move.x * right + move.y * forward;
+        // camera->transform->position += move.x * right + move.y * forward;
     }
 
     // reset button press counters:

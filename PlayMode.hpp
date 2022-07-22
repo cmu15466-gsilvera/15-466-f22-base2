@@ -14,7 +14,39 @@ struct AssetMesh {
     std::unordered_map<std::string, Scene::Transform**> components;
 };
 
-struct FourWheeledVehicle : AssetMesh {
+struct PhysicalAssetMesh : AssetMesh {
+    glm::vec3 pos, vel, accel;
+    glm::vec3 rot, rotvel, rotaccel;
+
+    PhysicalAssetMesh()
+    {
+        pos = glm::vec3(0, 0, 0);
+        vel = glm::vec3(0, 0, 0);
+        accel = glm::vec3(0, 0, 0);
+        rot = glm::vec3(0, 0, 0);
+        rotvel = glm::vec3(0, 0, 0);
+        rotaccel = glm::vec3(0, 0, 0);
+    }
+
+    void update(const float dt)
+    {
+        // update positional kinematics
+        vel += dt * accel;
+        pos += dt * vel;
+
+        // update rotational/angular kinematics
+        rotvel += dt * rotaccel;
+        rot += dt * rotvel;
+    }
+};
+
+#define WHEEL_ZERO 90 // 90 degrees is the "zero" angle for the tires
+struct FourWheeledVehicle : PhysicalAssetMesh {
+
+    FourWheeledVehicle()
+        : PhysicalAssetMesh()
+    {
+    }
 
     Scene::Transform *all, *chassis, *wheel_FL, *wheel_FR, *wheel_BL, *wheel_BR;
 
@@ -54,10 +86,25 @@ struct FourWheeledVehicle : AssetMesh {
         all->scale = glm::vec3(1, 1, 1);
     }
 
-    // glm::quat body_rotation;
-    // glm::quat front_wheel_rotation;
-    // glm::quat back_wheel_rotation;
-    float speed;
+    void update(const float dt)
+    {
+
+        float heading_x = glm::cos(glm::radians(wheel_heading));
+        float heading_y = glm::sin(glm::radians(wheel_heading));
+        /// TODO: vertical accel? gravity?
+        glm::vec3 heading = glm::vec3(heading_x, heading_y, 0);
+
+        accel = 10.f * heading * throttle - 20.f * heading * brake;
+
+        // finally perform the physics update
+        PhysicalAssetMesh::update(dt);
+        all->position = pos;
+        all->rotation = rot;
+    }
+
+    float wheel_heading = 90.f; // in degrees
+
+    float throttle = 0, brake = 0, steer = 0;
 };
 
 struct PlayMode : Mode {
