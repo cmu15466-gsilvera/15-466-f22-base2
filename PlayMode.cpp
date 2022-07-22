@@ -120,8 +120,8 @@ void PlayMode::update(float elapsed)
     if (ambulance.throttle > 0) {
         ambulance.chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
     }
-    ambulance.wheel_FL->rotation = glm::angleAxis(ambulance.steer_angle, glm::vec3(0, 0, 1));
-    ambulance.wheel_FR->rotation = glm::angleAxis(float(M_PI + ambulance.steer_angle), glm::vec3(0, 0, 1));
+    ambulance.wheel_FL->rotation = glm::angleAxis(ambulance.steer, glm::vec3(0, 0, 1));
+    ambulance.wheel_FR->rotation = glm::angleAxis(float(M_PI + ambulance.steer), glm::vec3(0, 0, 1));
 
     // wheel rotation (stretch)
     // ambulance.wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -135,11 +135,11 @@ void PlayMode::update(float elapsed)
         // combine inputs into a move:
         if (left.pressed || right.pressed) {
             if (left.pressed && !right.pressed)
-                ambulance.steer_angle = std::min(float(M_PI / 4), ambulance.steer_angle + elapsed * 0.5f);
+                ambulance.steer = std::min(float(M_PI / 4), ambulance.steer + elapsed * 0.5f);
             if (!left.pressed && right.pressed)
-                ambulance.steer_angle = std::max(float(-M_PI / 4), ambulance.steer_angle - elapsed * 0.5f);
+                ambulance.steer = std::max(float(-M_PI / 4), ambulance.steer - elapsed * 0.5f);
         } else {
-            ambulance.steer_angle += elapsed * 2.f * (0 - ambulance.steer_angle);
+            ambulance.steer += elapsed * 2.f * (0 - ambulance.steer);
         }
         if (up.pressed || down.pressed) {
             if (down.pressed && !up.pressed) {

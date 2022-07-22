@@ -1,8 +1,10 @@
 #include "Mode.hpp"
 
 #include "Scene.hpp"
+#include "Utils.hpp"
 
 #include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <deque>
 #include <iostream>
@@ -37,6 +39,7 @@ struct PhysicalAssetMesh : AssetMesh {
         // update rotational/angular kinematics
         rotvel += dt * rotaccel;
         rot += dt * rotvel;
+        normalize(rot);
     }
 };
 
@@ -90,7 +93,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         float delta = 0.f;
         if (angle > M_PI) {
             delta = -2.f * M_PI;
-        } else if (yaw < -M_PI) {
+        } else if (angle < -M_PI) {
             delta = 2.f * M_PI;
         }
         return angle + delta;
@@ -102,7 +105,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         // https://github.com/winstxnhdw/KinematicBicycleModel
 
         // create 3D velocity vector
-
+        const float yaw = rot.z + (M_PI / 2);
         glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
         int velocity_sign = glm::sign(glm::dot(vel, heading));
 
@@ -111,32 +114,22 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         speed = speed + dt * (10.f * throttle - 5.f * brake);
         float friction = speed * (c_r + c_a * speed);
         speed -= dt * glm::sign(speed) * friction; // apply friction
-
         vel = speed * heading;
 
         // Compute the angular velocity
-        float angular_vel = speed * glm::tan(steer_angle) / wheel_diameter_m;
-
-        // compute the global yaw direction
-        yaw = normalize_angle_rad(yaw + angular_vel * dt);
+        rotvel = (speed * glm::tan(steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
 
         // finally perform the physics update
         PhysicalAssetMesh::update(dt);
         all->position = pos;
-        all->rotation = glm::angleAxis(float(yaw - yaw0), glm::vec3(0.0f, 0.0f, 1.0f));
+        all->rotation = glm::quat(rot); // euler to Quat!
     }
 
     float wheel_diameter_m = 1.0f;
     float c_r = 0.1f; // coefficient of resistance
     float c_a = 0.9f; // coefficient of aerodynamics
 
-    float speed = 0; // m/s
-    float steer_angle = 0.f; // in radians
-
-    float yaw = M_PI / 2; // global heading (radians)
-    float yaw0 = M_PI / 2; // initial heading (radians)
-
-    float throttle = 0, brake = 0;
+    float throttle = 0.f, brake = 0.f, steer = 0.f;
 };
 
 struct PlayMode : Mode {
