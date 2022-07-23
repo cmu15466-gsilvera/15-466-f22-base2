@@ -52,14 +52,16 @@ struct PhysicalAssetMesh : AssetMesh {
 
 struct FourWheeledVehicle : PhysicalAssetMesh {
 
-    FourWheeledVehicle()
+    FourWheeledVehicle(const std::string& nameIn)
         : PhysicalAssetMesh()
     {
+        name = nameIn;
     }
 
+    bool bIsPlayer = false;
     Scene::Transform *all, *chassis, *wheel_FL, *wheel_FR, *wheel_BL, *wheel_BR;
 
-    void initialize_components(const std::string& name)
+    void initialize_components()
     {
         components[name] = &all;
         components["body"] = &chassis;
@@ -69,34 +71,75 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         components["wheel_backRight"] = &wheel_BR;
     }
 
-    void initialize_from_scene(Scene& scene, const std::string& name)
+    void initialize_from_scene(Scene& scene)
     {
         assert(scene.transforms.size() > 0);
 
         // add components to the global dictionary
-        initialize_components(name);
+        initialize_components();
 
         // get pointers to scene components for convenience:
-        for (auto& s : components) {
-            const std::string key = s.first;
+        std::string suffix = "";
 
-            for (auto& transform : scene.transforms) {
-                if (transform.name == key) {
-                    (*s.second) = &transform;
+        // find the first (and should be only) instance of $name in scene
+        bool found_name = false;
+        for (auto& transform : scene.transforms) {
+            if (!found_name) {
+                if (transform.name == name) {
+                    (*components[name]) = &transform;
+                    found_name = true;
+                }
+            } else {
+                if (transform.name.find("body") != std::string::npos) {
+                    auto const pos = transform.name.find_last_of('.');
+                    suffix = "." + transform.name.substr(pos + 1);
+                    if (suffix == ".body") {
+                        suffix = ""; // "." not found
+                    }
+                    break;
                 }
             }
-            if ((*s.second) == nullptr)
-                throw std::runtime_error("Unable to find \"" + key + "\" in scene!");
         }
 
-        assert(all != nullptr);
-        all->position = glm::vec3(0, 0, 0);
-        all->rotation = glm::identity<glm::quat>();
-        all->scale = glm::vec3(1, 1, 1);
+        for (auto& s : components) {
+            const std::string key = s.first;
+            const std::string search = key + suffix;
+            for (auto& transform : scene.transforms) {
+                if (transform.name == search) { // contains key
+                    (*s.second) = &transform;
+                    // std::cout << "found " << transform.name << " to fit " << search << std::endl;
+                    break;
+                }
+            }
+            /// TODO: break early once all the components are found
+            if (s.second == nullptr || (*s.second) == nullptr) {
+                throw std::runtime_error("Unable to find " + name + "'s \"" + s.first + "\" in scene");
+            }
+        }
+
+        if (all == nullptr)
+            throw std::runtime_error("main object for \"" + name + "\" is null");
+        pos = all->position;
+        rot = glm::eulerAngles(all->rotation);
     }
 
     void update(const float dt)
     {
+        woggle += 2 * dt;
+        woggle -= std::floor(woggle);
+
+        if (throttle > 0) {
+            chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        wheel_FL->rotation = glm::angleAxis(steer, glm::vec3(0, 0, 1));
+        wheel_FR->rotation = glm::angleAxis(float(M_PI + steer), glm::vec3(0, 0, 1));
+
+        // wheel rotation (stretch)
+        // wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+        // wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+        // wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+        // wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+
         if (pos.z <= 0) { // ground update
             // inspiration for this physics update was taken from this code:
             // https://github.com/winstxnhdw/KinematicBicycleModel
@@ -124,6 +167,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         } else { // in the air
             accel = glm::vec3(0, 0, -9.8);
         }
+
         // finally perform the physics update
         PhysicalAssetMesh::update(dt);
         all->position = pos;
@@ -139,7 +183,12 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     float wheel_diameter_m = 1.0f;
     float c_r = 0.02f; // coefficient of resistance
     float c_a = 0.25f; // drag coefficient
+    float woggle = 0;
 
+    // metadata
+    std::string name = "";
+
+    // control scheme inputs
     // throttle and brake are between 0..1, steer is between -PI..PI
     float throttle = 0.f, brake = 0.f, steer = 0.f;
 };
@@ -166,14 +215,13 @@ struct PlayMode : Mode {
     // local copy of the game scene (so code can change it during gameplay):
     Scene scene;
 
-    FourWheeledVehicle ambulance;
-    float woggle = 0;
+    // all the vehicles in the scene
+    std::vector<FourWheeledVehicle*> vehicle_map;
+    FourWheeledVehicle* Player = nullptr;
 
     // camera:
-    // float camera_orbit_yaw = 0.f;
-    // float camera_orbit_pitch = 0.f;
     glm::vec2 move = glm::vec2(0, 0);
-	float camera_arm_length = 15.f; // "distance" from camera to player
+    float camera_arm_length = 15.f; // "distance" from camera to player
     glm::vec3 camera_offset = glm::vec3(0, -15, 15);
     float mouse_drag_speed_x = -10;
     float mouse_drag_speed_y = -10;
