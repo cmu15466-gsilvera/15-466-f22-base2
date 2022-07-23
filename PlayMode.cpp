@@ -63,8 +63,8 @@ PlayMode::PlayMode()
         "van"
     };
 
-    // auto rng = std::default_random_engine {};
-    // std::shuffle(std::begin(vehicle_names), std::end(vehicle_names), rng);
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(vehicle_names), std::end(vehicle_names), rng);
 
     for (const std::string& name : vehicle_names) {
         FourWheeledVehicle* FWV = new FourWheeledVehicle(name);
