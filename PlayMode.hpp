@@ -34,6 +34,12 @@ struct PhysicalAssetMesh : AssetMesh {
     {
         // update positional kinematics
         vel += dt * accel;
+
+        if (pos.z <= 0) {
+            // downward velocity is 0 when on the ground
+            vel.z = std::max(0.f, vel.z);
+        }
+        // std::cout << glm::to_string(vel) << std::endl;
         pos += dt * vel;
         pos.z = std::max(0.f, pos.z);
 
@@ -91,29 +97,33 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
 
     void update(const float dt)
     {
-        // inspiration for this physics update was taken from this code:
-        // https://github.com/winstxnhdw/KinematicBicycleModel
+        if (pos.z <= 0) { // ground update
+            // inspiration for this physics update was taken from this code:
+            // https://github.com/winstxnhdw/KinematicBicycleModel
 
-        // create 3D acceleration vector
-        const float yaw = rot.z + (M_PI / 2);
-        const glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
-        accel = heading * (throttle_force * throttle - brake_force * brake);
+            // create 3D acceleration vector
+            const float yaw = rot.z + (M_PI / 2);
+            const glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+            accel = heading * (throttle_force * throttle - brake_force * brake) + glm::vec3(0, 0, accel.z);
 
-        // compute forward speed
-        int velocity_sign = glm::sign(glm::dot(vel, heading));
-        float signed_speed = velocity_sign * glm::length(vel);
+            // compute forward speed
+            glm::vec3 vel_2D = glm::vec3(vel.x, vel.y, 0);
+            int velocity_sign = glm::sign(glm::dot(vel_2D, heading));
+            float signed_speed = velocity_sign * glm::length(vel_2D);
 
-        // compute friction
-        float friction = signed_speed * (c_r + c_a * signed_speed);
-        accel -= vel * friction; // scale forward velocity by friction
+            // compute friction
+            float friction = signed_speed * (c_r + c_a * signed_speed);
+            accel -= vel_2D * friction; // scale forward velocity by friction
 
-        // ensure velocity in x/y is linked to heading
-        vel.x = signed_speed * heading.x;
-        vel.y = signed_speed * heading.y;
+            // ensure velocity in x/y is linked to heading
+            vel.x = signed_speed * heading.x;
+            vel.y = signed_speed * heading.y;
 
-        // compute angular velocity (only along yaw)
-        rotvel = (signed_speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
-
+            // compute angular velocity (only along yaw)
+            rotvel = (signed_speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
+        } else { // in the air
+            accel = glm::vec3(0, 0, -9.8);
+        }
         // finally perform the physics update
         PhysicalAssetMesh::update(dt);
         all->position = pos;
@@ -149,7 +159,9 @@ struct PlayMode : Mode {
     struct Button {
         uint8_t downs = 0;
         uint8_t pressed = 0;
-    } left, right, down, up;
+    } left, right, down, up, jump;
+
+    bool justJumped = false;
 
     // local copy of the game scene (so code can change it during gameplay):
     Scene scene;
@@ -158,5 +170,13 @@ struct PlayMode : Mode {
     float woggle = 0;
 
     // camera:
+    // float camera_orbit_yaw = 0.f;
+    // float camera_orbit_pitch = 0.f;
+    glm::vec2 move = glm::vec2(0, 0);
+	float camera_arm_length = 15.f; // "distance" from camera to player
+    glm::vec3 camera_offset = glm::vec3(0, -15, 15);
+    float mouse_drag_speed_x = -10;
+    float mouse_drag_speed_y = -10;
+    float mouse_scroll_speed = 5;
     Scene::Camera* camera = nullptr;
 };

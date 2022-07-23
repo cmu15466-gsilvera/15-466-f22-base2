@@ -75,6 +75,10 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
             down.downs += 1;
             down.pressed = true;
             return true;
+        } else if (evt.key.keysym.sym == SDLK_SPACE) {
+            jump.downs += 1;
+            jump.pressed = true;
+            return true;
         }
     } else if (evt.type == SDL_KEYUP) {
         if (evt.key.keysym.sym == SDLK_a) {
@@ -89,6 +93,9 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
         } else if (evt.key.keysym.sym == SDLK_s) {
             down.pressed = false;
             return true;
+        } else if (evt.key.keysym.sym == SDLK_SPACE) {
+            jump.pressed = false;
+            return true;
         }
     } else if (evt.type == SDL_MOUSEBUTTONDOWN) {
         if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
@@ -97,13 +104,9 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
         }
     } else if (evt.type == SDL_MOUSEMOTION) {
         if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-            glm::vec2 motion = glm::vec2(
+            move = glm::vec2(
                 evt.motion.xrel / float(window_size.y),
                 -evt.motion.yrel / float(window_size.y));
-            camera->transform->rotation = glm::normalize(
-                camera->transform->rotation
-                * glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-                * glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f)));
             return true;
         }
     }
@@ -134,18 +137,25 @@ void PlayMode::update(float elapsed)
     {
         // combine inputs into a move:
         if (left.pressed || right.pressed) {
-            const float wheel_turn_rate = 0.5f; // how many radians per second are turned
+            const float wheel_turn_rate = ambulance.pos.z > 0 ? 2.f : 0.5f; // how many radians per second are turned
             if (left.pressed && !right.pressed)
                 ambulance.steer = std::min(float(M_PI / 4), ambulance.steer + elapsed * wheel_turn_rate);
             if (!left.pressed && right.pressed)
                 ambulance.steer = std::max(float(-M_PI / 4), ambulance.steer - elapsed * wheel_turn_rate);
-            if (left.pressed && right.pressed) {
-                ambulance.vel += glm::vec3(0, 0, 5);
-            }
         } else {
             // force feedback return steering wheel to 0
             ambulance.steer += elapsed * 2.f * (0 - ambulance.steer);
         }
+        if (jump.pressed) {
+            if (!justJumped && ambulance.pos.z == 0) {
+                // give some initial velocity
+                ambulance.vel += glm::vec3(0, 0, 15);
+                justJumped = true;
+            }
+        } else {
+            justJumped = false;
+        }
+
         if (up.pressed || down.pressed) {
             if (down.pressed && !up.pressed) {
                 ambulance.throttle = 0;
@@ -159,18 +169,25 @@ void PlayMode::update(float elapsed)
             ambulance.throttle = 0;
             ambulance.brake = 0;
         }
-        camera->transform->position = ambulance.pos + glm::vec3(0, -15, 15);
+        camera->transform->position = ambulance.pos + camera_offset;
     }
 
     // move camera:
     {
+        // camera->transform->position += glm::vec3(motion.x, motion.y, 0);
 
-        // glm::mat4x3 frame = camera->transform->make_local_to_parent();
-        // glm::vec3 right = frame[0];
-        // // glm::vec3 up = frame[1];
+        glm::mat4x3 frame = camera->transform->make_local_to_parent();
+        glm::vec3 right = frame[0];
+        glm::vec3 up = frame[1];
         // glm::vec3 forward = -frame[2];
 
-        // camera->transform->position += move.x * right + move.y * forward;
+        camera_offset += mouse_drag_speed_x * move.x * right + mouse_drag_speed_y * move.y * up; // + mouse_scroll_speed * move.z * forward;
+
+        camera_offset.y = std::min(-1.f, std::max(camera_offset.y, -camera_arm_length)); // forward (negative bc looking behind vehicle)
+        camera_offset.z = std::min(camera_arm_length, std::max(camera_offset.z, 1.f)); // vertical
+
+        glm::vec3 dir = glm::normalize(ambulance.all->position - camera->transform->position);
+        camera->transform->rotation = glm::quatLookAt(dir, glm::vec3(0, 0, 1));
     }
 
     // reset button press counters:
