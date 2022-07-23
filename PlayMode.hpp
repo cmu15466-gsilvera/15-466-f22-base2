@@ -24,7 +24,7 @@ struct PhysicalAssetMesh : AssetMesh {
     {
         pos = glm::vec3(0, 0, 0);
         vel = glm::vec3(0, 0, 0);
-        accel = glm::vec3(0, 0, 0);
+        accel = glm::vec3(0, 0, -9.8); // gravity
         rot = glm::vec3(0, 0, 0);
         rotvel = glm::vec3(0, 0, 0);
         rotaccel = glm::vec3(0, 0, 0);
@@ -35,6 +35,7 @@ struct PhysicalAssetMesh : AssetMesh {
         // update positional kinematics
         vel += dt * accel;
         pos += dt * vel;
+        pos.z = std::max(0.f, pos.z);
 
         // update rotational/angular kinematics
         rotvel += dt * rotaccel;
@@ -93,24 +94,25 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         // inspiration for this physics update was taken from this code:
         // https://github.com/winstxnhdw/KinematicBicycleModel
 
-        // create 3D velocity vector
+        // create 3D acceleration vector
         const float yaw = rot.z + (M_PI / 2);
-        glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
-        int velocity_sign = glm::sign(glm::dot(vel, heading));
+        const glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+        accel = heading * (throttle_force * throttle - brake_force * brake);
 
         // compute forward speed
-        float speed = velocity_sign * glm::length(vel);
-        speed = speed + dt * (throttle_force * throttle - brake_force * brake);
+        int velocity_sign = glm::sign(glm::dot(vel, heading));
+        float signed_speed = velocity_sign * glm::length(vel);
 
         // compute friction
-        float friction = speed * (c_r + c_a * speed);
-        speed -= dt * glm::sign(speed) * friction; // apply friction
+        float friction = signed_speed * (c_r + c_a * signed_speed);
+        accel -= vel * friction; // scale forward velocity by friction
 
-        // apply speed to velocity
-        vel = speed * heading;
+        // ensure velocity in x/y is linked to heading
+        vel.x = signed_speed * heading.x;
+        vel.y = signed_speed * heading.y;
 
         // compute angular velocity (only along yaw)
-        rotvel = (speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
+        rotvel = (signed_speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
 
         // finally perform the physics update
         PhysicalAssetMesh::update(dt);
@@ -125,8 +127,8 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
 
     // constants
     float wheel_diameter_m = 1.0f;
-    float c_r = 0.1f; // coefficient of resistance
-    float c_a = 0.9f; // coefficient of aerodynamics
+    float c_r = 0.02f; // coefficient of resistance
+    float c_a = 0.25f; // drag coefficient
 
     // throttle and brake are between 0..1, steer is between -PI..PI
     float throttle = 0.f, brake = 0.f, steer = 0.f;

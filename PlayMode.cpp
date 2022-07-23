@@ -139,6 +139,9 @@ void PlayMode::update(float elapsed)
                 ambulance.steer = std::min(float(M_PI / 4), ambulance.steer + elapsed * wheel_turn_rate);
             if (!left.pressed && right.pressed)
                 ambulance.steer = std::max(float(-M_PI / 4), ambulance.steer - elapsed * wheel_turn_rate);
+            if (left.pressed && right.pressed) {
+                ambulance.vel += glm::vec3(0, 0, 5);
+            }
         } else {
             // force feedback return steering wheel to 0
             ambulance.steer += elapsed * 2.f * (0 - ambulance.steer);
