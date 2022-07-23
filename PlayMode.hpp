@@ -141,7 +141,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         // wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
 
         if (pos.z <= 0) { // ground update
-            // inspiration for this physics update was taken from this code:
+            // inspiration for this physics update 	was taken from this code:
             // https://github.com/winstxnhdw/KinematicBicycleModel
 
             // create 3D acceleration vector

@@ -194,6 +194,7 @@ void PlayMode::update(float elapsed)
             Player->throttle = 0;
             Player->brake = 0;
         }
+        /// TODO: rotate camera?
         camera->transform->position = Player->pos + camera_offset;
     }
 
@@ -208,8 +209,11 @@ void PlayMode::update(float elapsed)
 
         camera_offset += mouse_drag_speed_x * move.x * right + mouse_drag_speed_y * move.y * up; // + mouse_scroll_speed * move.z * forward;
 
-        camera_offset.y = std::min(-1.f, std::max(camera_offset.y, -camera_arm_length)); // forward (negative bc looking behind vehicle)
+        // camera_offset.y = std::min(-1.f, std::max(camera_offset.y, -camera_arm_length)); // forward (negative bc looking behind vehicle)
         camera_offset.z = std::min(camera_arm_length, std::max(camera_offset.z, 1.f)); // vertical
+        // normalize camera so its always camera_arm_length away
+        camera_offset /= glm::length(camera_offset);
+        camera_offset *= camera_arm_length;
 
         glm::vec3 dir = glm::normalize(Player->all->position - camera->transform->position);
         camera->transform->rotation = glm::quatLookAt(dir, glm::vec3(0, 0, 1));
