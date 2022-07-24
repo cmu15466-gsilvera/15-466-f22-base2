@@ -14,6 +14,8 @@ struct AssetMesh {
     AssetMesh() = default;
 
     std::unordered_map<std::string, Scene::Transform**> components;
+
+    BBox bounds;
 };
 
 struct PhysicalAssetMesh : AssetMesh {
@@ -47,6 +49,9 @@ struct PhysicalAssetMesh : AssetMesh {
         rotvel += dt * rotaccel;
         rot += dt * rotvel;
         normalize(rot);
+
+        // update bounds based off position and rotation
+        bounds.update(pos, rot.z); // only rotate with yaw
     }
 };
 
@@ -117,8 +122,13 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
             }
         }
 
-        if (all == nullptr)
-            throw std::runtime_error("main object for \"" + name + "\" is null");
+        auto* mesh = Scene::all_meshes["body" + suffix];
+        if (mesh == nullptr) {
+            throw std::runtime_error("null mesh in chassis (\"" + chassis->name + "\") \"" + name + "\"!");
+        }
+
+        bounds = BBox(mesh->min, mesh->max);
+
         pos = all->position;
         rot = glm::eulerAngles(all->rotation);
     }
@@ -141,7 +151,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         // wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
 
         if (pos.z <= 0) { // ground update
-            // inspiration for this physics update 	was taken from this code:
+            // inspiration for this physics update was taken from this code:
             // https://github.com/winstxnhdw/KinematicBicycleModel
 
             // create 3D acceleration vector

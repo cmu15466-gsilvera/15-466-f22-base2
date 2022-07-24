@@ -21,9 +21,15 @@ Load<MeshBuffer> load_meshes(LoadTagDefault, []() -> MeshBuffer const* {
     return ret;
 });
 
+// define static variable
+std::unordered_map<std::string, const Mesh*> Scene::all_meshes = {};
+
 Load<Scene> load_scene(LoadTagDefault, []() -> Scene const* {
     return new Scene(data_path("world.scene"), [&](Scene& scene, Scene::Transform* transform, std::string const& mesh_name) {
         Mesh const& mesh = load_meshes->lookup(mesh_name);
+
+        // assign this mesh to the corresponding scene transform
+        Scene::all_meshes[transform->name] = &mesh;
 
         scene.drawables.emplace_back(transform);
         Scene::Drawable& drawable = scene.drawables.back();
@@ -63,8 +69,8 @@ PlayMode::PlayMode()
         "van"
     };
 
-    auto rng = std::default_random_engine {};
-    std::shuffle(std::begin(vehicle_names), std::end(vehicle_names), rng);
+    // auto rng = std::default_random_engine {};
+    // std::shuffle(std::begin(vehicle_names), std::end(vehicle_names), rng);
 
     for (const std::string& name : vehicle_names) {
         FourWheeledVehicle* FWV = new FourWheeledVehicle(name);
@@ -216,6 +222,7 @@ void PlayMode::update(float elapsed)
         camera_offset *= camera_arm_length;
 
         glm::vec3 dir = glm::normalize(Player->all->position - camera->transform->position);
+        /// TODO: fix the spinning when go directly over and up is parallel to dir
         camera->transform->rotation = glm::quatLookAt(dir, glm::vec3(0, 0, 1));
     }
 
@@ -269,5 +276,16 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
             glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + +0.1f * H + ofs, 0.0),
             glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
             glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+    }
+
+    // draw lines in 3D space
+    {
+        glDisable(GL_DEPTH_TEST);
+        glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(camera->transform->make_world_to_local());
+
+        DrawLines lines(world_to_clip);
+
+        // draw bounding box
+        lines.draw_box(Player->bounds.get_mat(), glm::u8vec4(0xff, 0x0, 0x0, 0xff));
     }
 }
