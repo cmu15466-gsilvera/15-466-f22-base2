@@ -163,13 +163,38 @@ void PlayMode::update(float elapsed)
         FWV->update(elapsed);
         // check collisions
         FWV->bounds.collided = false;
+        float speed = glm::length(FWV->vel);
         for (FourWheeledVehicle* otherFWV : vehicle_map) {
-            bool collided = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
-            if (otherFWV != FWV && collided) {
+            bool was_collision = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
+            if (otherFWV != FWV && was_collision) {
                 FWV->bounds.collided = true;
+
+                // delete whihever vehicle has the lower speed
+                float other_speed = glm::length(otherFWV->vel);
+                if (speed < other_speed) {
+                    FWV->die();
+                } else {
+                    otherFWV->die();
+                }
                 break;
             }
         }
+    }
+
+    {
+        // delete all disabled vehicles
+        std::vector<FourWheeledVehicle*> alive_vehicles = {};
+        for (FourWheeledVehicle* FWV : vehicle_map) {
+            if (FWV->enabled) {
+                alive_vehicles.push_back(FWV);
+            } else {
+                /// TODO: figure out a better/proper way to destroy
+                // move it to under the screen so it is invis
+                FWV->all->position = glm::vec3(0, 0, -100);
+            }
+        }
+
+        vehicle_map = std::move(alive_vehicles);
     }
 
     {
@@ -288,7 +313,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     }
 
     // draw lines in 3D space
-    {
+    if (false) {
         glDisable(GL_DEPTH_TEST);
         glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(camera->transform->make_world_to_local());
 

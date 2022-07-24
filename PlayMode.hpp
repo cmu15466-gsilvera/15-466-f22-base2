@@ -17,6 +17,13 @@ struct AssetMesh {
     std::unordered_map<std::string, Scene::Transform**> components;
 
     BBox bounds;
+
+    bool enabled = true;
+
+    void die()
+    {
+        enabled = false;
+    }
 };
 
 struct PhysicalAssetMesh : AssetMesh {
