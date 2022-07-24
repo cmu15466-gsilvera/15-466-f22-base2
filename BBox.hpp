@@ -26,9 +26,6 @@ public:
         // first rotate pt by the origin of this bbox by -yaw
         glm::vec3 pt_midpt = pt - midpt; // vector from origin of this box to the pt
 
-        // NOTE: only want to rotate x and y components, not z
-        pt_midpt.z = pt.z; // maintain this z
-
         // rotate pt_midpt
         float yaw = rot.z; // since this bbox can be alined along yaw only
         // rotate point by -yaw to reach axis aligned
@@ -37,7 +34,10 @@ public:
         // now that the pt is axis-aligned to the original bounds, the check is trivial
         bool within_x = (AA_pt.x >= min0.x && AA_pt.x <= max0.x);
         bool within_y = (AA_pt.y >= min0.y && AA_pt.y <= max0.y);
-        bool within_z = (AA_pt.z >= min0.z && AA_pt.z <= max0.z);
+
+        // z is weird bc only the AA x and y components need to be rotated, z just needs
+        // to be within the same plane so it can use the absolute coordinates (not corrected for rotation)
+        bool within_z = (pt.z >= midpt.z - extent.z / 2.f && pt.z <= midpt.z + extent.z / 2.f);
         return within_x && within_y && within_z;
     }
 

@@ -187,7 +187,7 @@ void PlayMode::update(float elapsed)
         if (jump.pressed) {
             if (!justJumped && Player->pos.z == 0) {
                 // give some initial velocity
-                Player->vel += glm::vec3(0, 0, 15);
+                Player->vel += glm::vec3(0, 0, 10);
                 justJumped = true;
             }
         } else {
