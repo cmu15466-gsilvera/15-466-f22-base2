@@ -1,5 +1,6 @@
 #include "Mode.hpp"
 
+#include "BBox.hpp"
 #include "Scene.hpp"
 #include "Utils.hpp"
 
