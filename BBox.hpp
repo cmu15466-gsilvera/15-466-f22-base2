@@ -26,6 +26,9 @@ public:
         // first rotate pt by the origin of this bbox by -yaw
         glm::vec3 pt_midpt = pt - midpt; // vector from origin of this box to the pt
 
+        // NOTE: only want to rotate x and y components, not z
+        pt_midpt.z = pt.z; // maintain this z
+
         // rotate pt_midpt
         float yaw = rot.z; // since this bbox can be alined along yaw only
         // rotate point by -yaw to reach axis aligned
@@ -40,9 +43,12 @@ public:
 
     bool collides_with(const BBox& other) const
     {
+        /// NOTE: this impl is kinda buggy in that it fails if the two boxes are
+        // aligned such that no 8 points are inside the other (like a cross) and midpt
+        // is just a hack that works bc none of the bboxes are super long
+
         // check if this bbox contains any of the 9 points (vertices + midpt) of other
         const glm::vec3 size = other.extent / 2.f;
-
         const float other_yaw = other.rot.z;
         std::vector<glm::vec3> check_points = {
             other.midpt, // midpt
@@ -96,6 +102,8 @@ public:
         // first scale, then rotate, then transform
         return trans * rot4 * scale;
     }
+
+    bool collided = false;
 
     glm::vec3 min0, max0;
 

@@ -161,6 +161,15 @@ void PlayMode::update(float elapsed)
     // update all the vehicles
     for (FourWheeledVehicle* FWV : vehicle_map) {
         FWV->update(elapsed);
+        // check collisions
+        FWV->bounds.collided = false;
+        for (FourWheeledVehicle* otherFWV : vehicle_map) {
+            bool collided = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
+            if (otherFWV != FWV && collided) {
+                FWV->bounds.collided = true;
+                break;
+            }
+        }
     }
 
     {
@@ -284,8 +293,10 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
         glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(camera->transform->make_world_to_local());
 
         DrawLines lines(world_to_clip);
-
-        // draw bounding box
-        lines.draw_box(Player->bounds.get_mat(), glm::u8vec4(0xff, 0x0, 0x0, 0xff));
+        for (FourWheeledVehicle* FWV : vehicle_map) {
+            // draw bounding box
+            auto collision_colour = FWV->bounds.collided ? glm::u8vec4(0xff, 0x0, 0x0, 0xff) : glm::u8vec4(0xff);
+            lines.draw_box(FWV->bounds.get_mat(), collision_colour);
+        }
     }
 }
