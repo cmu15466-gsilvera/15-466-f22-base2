@@ -160,6 +160,9 @@ void PlayMode::update(float elapsed)
 
     // update all the vehicles
     for (FourWheeledVehicle* FWV : vehicle_map) {
+        if (!FWV->bIsPlayer) {
+            FWV->think(elapsed, vehicle_map); // determine target & controls
+        }
         FWV->update(elapsed);
         // check collisions
         FWV->bounds.collided = false;
@@ -201,10 +204,11 @@ void PlayMode::update(float elapsed)
         // combine inputs into a move:
         if (left.pressed || right.pressed) {
             const float wheel_turn_rate = Player->pos.z > 0 ? 2.f : 0.5f; // how many radians per second are turned
+            float delta = elapsed * wheel_turn_rate;
             if (left.pressed && !right.pressed)
-                Player->steer = std::min(float(M_PI / 4), Player->steer + elapsed * wheel_turn_rate);
+                Player->turn_wheel(delta);
             if (!left.pressed && right.pressed)
-                Player->steer = std::max(float(-M_PI / 4), Player->steer - elapsed * wheel_turn_rate);
+                Player->turn_wheel(-delta);
         } else {
             // force feedback return steering wheel to 0
             Player->steer += elapsed * 2.f * (0 - Player->steer);
@@ -227,7 +231,7 @@ void PlayMode::update(float elapsed)
                 Player->brake = 1;
             }
             if (!down.pressed && up.pressed) {
-                Player->throttle = 1;
+                Player->throttle = 5;
                 Player->brake = 0;
             }
         } else {
@@ -248,6 +252,9 @@ void PlayMode::update(float elapsed)
         // glm::vec3 forward = -frame[2];
 
         camera_offset += mouse_drag_speed_x * move.x * right + mouse_drag_speed_y * move.y * up; // + mouse_scroll_speed * move.z * forward;
+
+        // reset the delta's so the camera stops when mouse up
+        move = glm::vec2(0, 0);
 
         // camera_offset.y = std::min(-1.f, std::max(camera_offset.y, -camera_arm_length)); // forward (negative bc looking behind vehicle)
         camera_offset.z = std::min(camera_arm_length, std::max(camera_offset.z, 1.f)); // vertical

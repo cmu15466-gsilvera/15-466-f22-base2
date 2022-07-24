@@ -141,6 +141,25 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         rot = glm::eulerAngles(all->rotation);
     }
 
+    FourWheeledVehicle* target = nullptr;
+    void think(const float dt, const std::vector<FourWheeledVehicle*>& others)
+    {
+        while ((target == nullptr || target == this) && others.size() > 1) {
+            target = others[std::rand() % others.size()];
+        }
+
+        // always driving forward
+        this->throttle = 1;
+
+        // turn to face the target
+        glm::vec2 dir2D = glm::vec2(target->pos - this->pos);
+        const float yaw = rot.z;
+        const glm::vec2 heading = glm::vec2(glm::cos(yaw), glm::sin(yaw));
+
+        float steer_magnitude = 2.f * glm::dot(dir2D, heading);
+        turn_wheel(-dt * steer_magnitude);
+    }
+
     void update(const float dt)
     {
         woggle += 2 * dt;
@@ -190,6 +209,12 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         PhysicalAssetMesh::update(dt);
         all->position = pos;
         all->rotation = glm::quat(rot); // euler to Quat!
+    }
+
+    void turn_wheel(const float delta)
+    {
+        // clamp steer between -pi/4 to pi/4
+        this->steer = std::min(float(M_PI / 4), std::max(float(-M_PI / 4), steer + delta));
     }
 
     // how strong these effects get scaled
