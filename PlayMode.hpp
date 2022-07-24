@@ -30,6 +30,8 @@ struct PhysicalAssetMesh : AssetMesh {
     glm::vec3 pos, vel, accel;
     glm::vec3 rot, rotvel, rotaccel;
 
+    glm::vec3 collision_force;
+
     PhysicalAssetMesh()
     {
         pos = glm::vec3(0, 0, 0);
@@ -38,12 +40,17 @@ struct PhysicalAssetMesh : AssetMesh {
         rot = glm::vec3(0, 0, 0);
         rotvel = glm::vec3(0, 0, 0);
         rotaccel = glm::vec3(0, 0, 0);
+        collision_force = glm::vec3(0, 0, 0);
     }
 
     void update(const float dt)
     {
         // update positional kinematics
         vel += dt * accel;
+        vel += dt * collision_force;
+
+        // reset collision force until next collision
+        collision_force = glm::vec3(0, 0, 0);
 
         if (pos.z <= 0) {
             // downward velocity is 0 when on the ground
@@ -148,11 +155,13 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
             target = others[std::rand() % others.size()];
         }
 
+        // get direction to target
+        glm::vec2 dir2D = glm::vec2(target->pos - this->pos);
+
         // always driving forward
-        this->throttle = 1;
+        this->throttle = 1 / glm::length(dir2D);
 
         // turn to face the target
-        glm::vec2 dir2D = glm::vec2(target->pos - this->pos);
         const float yaw = rot.z;
         const glm::vec2 heading = glm::vec2(glm::cos(yaw), glm::sin(yaw));
 
@@ -264,8 +273,8 @@ struct PlayMode : Mode {
 
     // camera:
     glm::vec2 move = glm::vec2(0, 0);
-    float camera_arm_length = 15.f; // "distance" from camera to player
-    glm::vec3 camera_offset = glm::vec3(0, -15, 15);
+    float camera_arm_length = 25.f; // "distance" from camera to player
+    glm::vec3 camera_offset = glm::vec3(0, -1, 1);
     float mouse_drag_speed_x = -10;
     float mouse_drag_speed_y = -10;
     float mouse_scroll_speed = 5;

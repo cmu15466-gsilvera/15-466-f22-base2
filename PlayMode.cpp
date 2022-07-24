@@ -166,19 +166,22 @@ void PlayMode::update(float elapsed)
         FWV->update(elapsed);
         // check collisions
         FWV->bounds.collided = false;
-        float speed = glm::length(FWV->vel);
+        // float speed = glm::length(FWV->vel);
         for (FourWheeledVehicle* otherFWV : vehicle_map) {
             bool was_collision = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
             if (otherFWV != FWV && was_collision) {
                 FWV->bounds.collided = true;
 
+                glm::vec3 dir = FWV->pos - otherFWV->pos;
+                FWV->collision_force = dir / elapsed;
+
                 // delete whihever vehicle has the lower speed
-                float other_speed = glm::length(otherFWV->vel);
-                if (speed < other_speed) {
-                    FWV->die();
-                } else {
-                    otherFWV->die();
-                }
+                // float other_speed = glm::length(otherFWV->vel);
+                // if (speed < other_speed) {
+                //     FWV->die();
+                // } else {
+                //     otherFWV->die();
+                // }
                 break;
             }
         }
@@ -320,7 +323,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     }
 
     // draw lines in 3D space
-    if (false) {
+    if (true) {
         glDisable(GL_DEPTH_TEST);
         glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(camera->transform->make_world_to_local());
 
