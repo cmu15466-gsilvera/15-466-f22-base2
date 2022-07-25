@@ -161,27 +161,26 @@ void PlayMode::update(float elapsed)
     // update all the vehicles
     for (FourWheeledVehicle* FWV : vehicle_map) {
         if (!FWV->bIsPlayer) {
+            FWV->target = Player;
             FWV->think(elapsed, vehicle_map); // determine target & controls
         }
         FWV->update(elapsed);
         // check collisions
         FWV->bounds.collided = false;
-        // float speed = glm::length(FWV->vel);
+        glm::vec3 heading = FWV->get_heading();
         for (FourWheeledVehicle* otherFWV : vehicle_map) {
             bool was_collision = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
             if (otherFWV != FWV && was_collision) {
                 FWV->bounds.collided = true;
 
                 glm::vec3 dir = FWV->pos - otherFWV->pos;
-                FWV->collision_force = dir / elapsed;
-
-                // delete whihever vehicle has the lower speed
-                // float other_speed = glm::length(otherFWV->vel);
-                // if (speed < other_speed) {
-                //     FWV->die();
-                // } else {
-                //     otherFWV->die();
-                // }
+                FWV->collision_force = 0.5f * dir / elapsed;
+                // check if got bumped
+                if (glm::dot(heading, dir) > 0) {
+                    FWV->health--;
+                    // if (FWV->health == 0)
+                    //     FWV->die();
+                }
                 break;
             }
         }
@@ -234,7 +233,7 @@ void PlayMode::update(float elapsed)
                 Player->brake = 1;
             }
             if (!down.pressed && up.pressed) {
-                Player->throttle = 5;
+                Player->throttle = 1;
                 Player->brake = 0;
             }
         } else {
@@ -311,12 +310,12 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
             0.0f, 0.0f, 0.0f, 1.0f));
 
         constexpr float H = 0.09f;
-        lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+        lines.draw_text("Health: " + std::to_string(Player->health),
             glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
             glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-            glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+            glm::u8vec4(0x00, 0x00, 0x00, 0xF0));
         float ofs = 2.0f / drawable_size.y;
-        lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+        lines.draw_text("Health: " + std::to_string(Player->health),
             glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + +0.1f * H + ofs, 0.0),
             glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
             glm::u8vec4(0xff, 0xff, 0xff, 0x00));

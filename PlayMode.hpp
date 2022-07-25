@@ -76,6 +76,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         : PhysicalAssetMesh()
     {
         name = nameIn;
+        wheel_bounds = glm::vec2(-M_PI / 4.f, M_PI / 4.f); // [LB, UB]
     }
 
     bool bIsPlayer = false;
@@ -148,6 +149,12 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         rot = glm::eulerAngles(all->rotation);
     }
 
+    glm::vec3 get_heading(bool raw = false) const
+    {
+        const float yaw = rot.z + (raw ? 0 : (M_PI / 2));
+        return glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+    }
+
     FourWheeledVehicle* target = nullptr;
     void think(const float dt, const std::vector<FourWheeledVehicle*>& others)
     {
@@ -158,15 +165,23 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         // get direction to target
         glm::vec2 dir2D = glm::vec2(target->pos - this->pos);
 
-        // always driving forward
-        this->throttle = 1 / glm::length(dir2D);
-
         // turn to face the target
-        const float yaw = rot.z;
-        const glm::vec2 heading = glm::vec2(glm::cos(yaw), glm::sin(yaw));
+        // glm::vec2 heading = glm::vec2(get_heading());
+        glm::vec2 heading_swap = glm::vec2(get_heading(true));
 
-        float steer_magnitude = 2.f * glm::dot(dir2D, heading);
-        turn_wheel(-dt * steer_magnitude);
+        // positive when front, negative when behind
+        // float dot = glm::dot(glm::normalize(dir2D), glm::normalize(heading));
+        // positive when right, negative when left
+        float dot2 = glm::dot(glm::normalize(dir2D), glm::normalize(heading_swap));
+        float angle = std::acos(dot2) - M_PI / 2.f;
+        // whether the target is within the bounds of steering
+        int forward = (std::fabs(angle) < wheel_bounds.y) && (std::fabs(angle) > wheel_bounds.x);
+        angle = std::min(wheel_bounds.y, std::max(wheel_bounds.x, angle));
+        if (!forward) {
+            angle = -glm::sign(dot2) * float(M_PI / 4);
+        }
+        this->throttle = glm::min(1.f, 1.f / glm::length(dir2D));
+        this->steer = angle;
     }
 
     void update(const float dt)
@@ -191,8 +206,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
             // https://github.com/winstxnhdw/KinematicBicycleModel
 
             // create 3D acceleration vector
-            const float yaw = rot.z + (M_PI / 2);
-            const glm::vec3 heading = glm::vec3(glm::cos(yaw), glm::sin(yaw), 0);
+            auto heading = get_heading();
             accel = heading * (throttle_force * throttle - brake_force * brake) + glm::vec3(0, 0, accel.z);
 
             // compute forward speed
@@ -223,13 +237,14 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     void turn_wheel(const float delta)
     {
         // clamp steer between -pi/4 to pi/4
-        this->steer = std::min(float(M_PI / 4), std::max(float(-M_PI / 4), steer + delta));
+        this->steer = std::min(wheel_bounds.y, std::max(wheel_bounds.x, steer + delta));
     }
 
     // how strong these effects get scaled
     float throttle_force = 10.f;
     float brake_force = 5.f; // brake or reverse?
     float steer_force = 1.f;
+    glm::vec2 wheel_bounds; // [LB, UB]
 
     // constants
     float wheel_diameter_m = 1.0f;
@@ -239,6 +254,8 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
 
     // metadata
     std::string name = "";
+
+    float health = 20; // maximum number of bumps
 
     // control scheme inputs
     // throttle and brake are between 0..1, steer is between -PI..PI

@@ -13,6 +13,19 @@ inline glm::vec3 rotate_yaw(const float yaw, const glm::vec3& vec)
 
 inline float repeat(float x, float min, float max)
 {
+    // assumes the x is bounded
+    float normalized = x;
+    if (normalized > max) {
+        normalized -= 2 * max;
+    }
+    if (normalized < min) {
+        normalized -= 2 * min;
+    }
+    return normalized;
+}
+
+inline float repeat_loop(float x, float min, float max)
+{
     float normalized = x;
     while (normalized > max) {
         normalized -= 2 * max;
