@@ -82,6 +82,7 @@ PlayMode::PlayMode()
     Player = vehicle_map[0];
     std::cout << "Determined player to be \"" << Player->name << "\"" << std::endl;
     Player->bIsPlayer = true;
+    Player->health = 10;
 
     // get pointer to camera for convenience:
     if (scene.cameras.size() != 1)
@@ -158,6 +159,12 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 void PlayMode::update(float elapsed)
 {
 
+    if (vehicle_map.size() == 1 && vehicle_map[0]->bIsPlayer) {
+        // last one standing
+        game_over = true;
+        win = true;
+    }
+
     // update all the vehicles
     for (FourWheeledVehicle* FWV : vehicle_map) {
         if (!FWV->bIsPlayer) {
@@ -176,10 +183,10 @@ void PlayMode::update(float elapsed)
                 glm::vec3 dir = FWV->pos - otherFWV->pos;
                 FWV->collision_force = 0.5f * dir / elapsed;
                 // check if got bumped
-                if (glm::dot(heading, dir) > 0) {
+                if (glm::dot(dir, heading) > 0) {
                     FWV->health--;
-                    // if (FWV->health == 0)
-                    //     FWV->die();
+                    if (FWV->health == 0)
+                        FWV->die();
                 }
                 break;
             }
@@ -193,6 +200,11 @@ void PlayMode::update(float elapsed)
             if (FWV->enabled) {
                 alive_vehicles.push_back(FWV);
             } else {
+                if (FWV->bIsPlayer) {
+                    game_over = true;
+                    win = false;
+                    return;
+                }
                 /// TODO: figure out a better/proper way to destroy
                 // move it to under the screen so it is invis
                 FWV->all->position = glm::vec3(0, 0, -100);
@@ -300,25 +312,42 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
 
     scene.draw(*camera);
 
-    { // use DrawLines to overlay some text:
+    {
+        // use DrawLines to overlay some text:
         glDisable(GL_DEPTH_TEST);
         float aspect = float(drawable_size.x) / float(drawable_size.y);
-        DrawLines lines(glm::mat4(
+        auto projection = glm::mat4(
             1.0f / aspect, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f));
+            0.0f, 0.0f, 0.0f, 1.0f);
 
-        constexpr float H = 0.09f;
-        lines.draw_text("Health: " + std::to_string(Player->health),
-            glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-            glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-            glm::u8vec4(0x00, 0x00, 0x00, 0xF0));
-        float ofs = 2.0f / drawable_size.y;
-        lines.draw_text("Health: " + std::to_string(Player->health),
-            glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + +0.1f * H + ofs, 0.0),
-            glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-            glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+        if (game_over) {
+            DrawLines lines(projection, true);
+            float win_message_width = win ? 0.5f : 0.9f;
+            float win_message_height = 0.3f;
+            auto win_message = win ? "VICTORY ACHIEVED!" : "YOU DIED";
+            glm::u8vec4 win_colour = win ? glm::u8vec4(0xff, 0xff, 0, 0xff) : glm::u8vec4(0xff, 0, 0, 0xff);
+            float pos_x = win ? -1.5f : -1.3f;
+            lines.draw_text(win_message,
+                glm::vec3(pos_x, 0, 0),
+                glm::vec3(win_message_width, 0.0f, 0.0f),
+                glm::vec3(0.0f, win_message_height, 0.0f),
+                win_colour);
+
+        } else {
+            DrawLines lines(projection, false);
+            constexpr float H = 0.09f;
+            lines.draw_text("Health: " + std::to_string(Player->health),
+                glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
+                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+                glm::u8vec4(0x00, 0x00, 0x00, 0xF0));
+            float ofs = 2.0f / drawable_size.y;
+            lines.draw_text("Health: " + std::to_string(Player->health),
+                glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + +0.1f * H + ofs, 0.0),
+                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+        }
     }
 
     // draw lines in 3D space

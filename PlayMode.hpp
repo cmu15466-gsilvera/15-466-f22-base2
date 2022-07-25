@@ -158,9 +158,13 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     FourWheeledVehicle* target = nullptr;
     void think(const float dt, const std::vector<FourWheeledVehicle*>& others)
     {
-        while ((target == nullptr || target == this) && others.size() > 1) {
-            target = others[std::rand() % others.size()];
+        if (others.size() <= 1) {
+            return;
         }
+
+        // while ((target == nullptr || target == this || !target->enabled)) {
+        //     target = others[std::rand() % others.size()];
+        // }
 
         // get direction to target
         glm::vec2 dir2D = glm::vec2(target->pos - this->pos);
@@ -255,7 +259,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     // metadata
     std::string name = "";
 
-    float health = 20; // maximum number of bumps
+    float health = 2; // maximum number of bumps
 
     // control scheme inputs
     // throttle and brake are between 0..1, steer is between -PI..PI
@@ -283,6 +287,8 @@ struct PlayMode : Mode {
 
     // local copy of the game scene (so code can change it during gameplay):
     Scene scene;
+    bool game_over = false;
+    bool win = true;
 
     // all the vehicles in the scene
     std::vector<FourWheeledVehicle*> vehicle_map;
