@@ -30,6 +30,7 @@ struct PlayMode : Mode {
     } left, right, down, up, jump;
 
     bool justJumped = false;
+    bool bDrawBoundingBoxes = false;
 
     // local copy of the game scene (so code can change it during gameplay):
     Scene scene;

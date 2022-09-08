@@ -121,6 +121,9 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
             jump.downs += 1;
             jump.pressed = true;
             return true;
+        } else if (evt.key.keysym.sym == SDLK_b) {
+            bDrawBoundingBoxes = !bDrawBoundingBoxes;
+            return true;
         }
     } else if (evt.type == SDL_KEYUP) {
         if (evt.key.keysym.sym == SDLK_a) {
@@ -351,7 +354,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     }
 
     // draw lines in 3D space
-    if (true) {
+    if (bDrawBoundingBoxes) {
         glDisable(GL_DEPTH_TEST);
         glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(camera->transform->make_world_to_local());
 
