@@ -30,6 +30,9 @@ inline std::string find_suffix_in_scene(const std::string& name, const std::stri
             }
         }
     }
+    if (!found_name) {
+        throw std::runtime_error("Unable to find mesh: \"" + name + "\" in scene");
+    }
     // std::cout << "found suffix to be \"" << suffix << "\"" << std::endl;
     return suffix;
 }

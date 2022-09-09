@@ -206,6 +206,10 @@ def write_objects(from_collection):
 			instance_parents.append(obj)
 			write_objects(obj.instance_collection)
 			instance_parents.pop()
+		elif obj.type == 'EMPTY':
+			write_xfh(obj)
+			instance_parents.append(obj)
+			instance_parents.pop()
 		else:
 			print('Skipping ' + obj.type)
 	for child in from_collection.children:

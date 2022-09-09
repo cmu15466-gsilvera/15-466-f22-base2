@@ -48,25 +48,14 @@ PlayMode::PlayMode()
 {
 
     std::vector<std::string> vehicle_names = {
-        "ambulance",
-        "delivery",
-        "deliveryFlat",
-        "firetruck",
-        "garbageTruck",
-        "hatchbackSports",
-        "police",
-        "race",
-        "sedan",
-        "sedanSports",
-        "suv",
-        "suvLuxury",
-        "taxi",
-        "tractor",
-        "tractorPolice",
-        "tractorShovel",
-        "truck",
-        "truckFlat",
-        "van"
+        "car",
+        "car.001",
+        "car.002",
+        "car.003",
+        "car.004",
+        "car.005",
+        "car.006",
+        /// TODO: add cars in code, not model
     };
 
     // auto rng = std::default_random_engine {};
@@ -76,9 +65,9 @@ PlayMode::PlayMode()
         FourWheeledVehicle* FWV = new FourWheeledVehicle(name);
         FWV->initialize_from_scene(scene);
         vehicle_map.push_back(FWV);
-        // the first vehicle will be the player
     }
 
+    // the first vehicle will be the player
     Player = vehicle_map[0];
     std::cout << "Determined player to be \"" << Player->name << "\"" << std::endl;
     Player->bIsPlayer = true;
@@ -161,6 +150,11 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 
 void PlayMode::update(float elapsed)
 {
+
+    if (elapsed == 0) {
+        // std::cout << "zero elapsed time?" << std::endl;
+        return;
+    }
 
     if (vehicle_map.size() == 1 && vehicle_map[0]->bIsPlayer) {
         // last one standing
