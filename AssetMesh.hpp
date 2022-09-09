@@ -38,13 +38,14 @@ struct PhysicalAssetMesh : AssetMesh {
     glm::vec3 rot, rotvel, rotaccel;
 
     glm::vec3 collision_force;
+    constexpr static glm::vec3 gravity = glm::vec3(0, 0, -9.8);
 
     PhysicalAssetMesh(const std::string& nameIn)
         : AssetMesh(nameIn)
     {
         pos = glm::vec3(0, 0, 0);
         vel = glm::vec3(0, 0, 0);
-        accel = glm::vec3(0, 0, -9.8); // gravity
+        accel = gravity;
         rot = glm::vec3(0, 0, 0);
         rotvel = glm::vec3(0, 0, 0);
         rotaccel = glm::vec3(0, 0, 0);
@@ -212,6 +213,9 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
             // compute friction
             float friction = signed_speed * (c_r + c_a * signed_speed);
             accel -= vel_2D * friction; // scale forward velocity by friction
+            const float MAX_ACCEL = 100;
+            accel.x = std::min(std::max(accel.x, -MAX_ACCEL), MAX_ACCEL);
+            accel.y = std::min(std::max(accel.y, -MAX_ACCEL), MAX_ACCEL);
 
             // ensure velocity in x/y is linked to heading
             vel.x = signed_speed * heading.x;
@@ -220,7 +224,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
             // compute angular velocity (only along yaw)
             rotvel = (signed_speed * glm::tan(steer_force * steer) / wheel_diameter_m) * glm::vec3(0, 0, 1);
         } else { // in the air
-            accel = glm::vec3(0, 0, -9.8);
+            accel = gravity;
         }
 
         // finally perform the physics update

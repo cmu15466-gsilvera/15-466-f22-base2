@@ -177,7 +177,7 @@ void PlayMode::update(float elapsed)
             if (otherFWV != FWV && was_collision) {
                 FWV->bounds.collided = true;
 
-                glm::vec3 dir = FWV->pos - otherFWV->pos;
+                glm::vec3 dir = FWV->pos - otherFWV->pos; // scaled by distance
                 FWV->collision_force = 0.5f * dir / elapsed;
                 // check if got bumped
                 if (glm::dot(dir, heading) > 0) {
