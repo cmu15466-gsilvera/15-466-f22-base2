@@ -189,27 +189,25 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
         if (throttle > 0) {
             chassis->rotation = glm::angleAxis(glm::radians(std::sin(woggle * 2 * float(M_PI))), glm::vec3(0.0f, 1.0f, 0.0f));
         }
-        wheel_FL->rotation = glm::angleAxis(steer, glm::vec3(0, 0, 1));
-        wheel_FR->rotation = glm::angleAxis(float(M_PI + steer), glm::vec3(0, 0, 1));
+        // create 3D acceleration vector
+        auto heading = get_heading();
+        accel = heading * (throttle_force * throttle - brake_force * brake) + glm::vec3(0, 0, accel.z);
 
-        // wheel rotation (stretch)
-        // wheel_FL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-        // wheel_FR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-        // wheel_BL->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
-        // wheel_BR->rotation *= glm::angleAxis(-0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
+        // compute forward speed
+        glm::vec3 vel_2D = glm::vec3(vel.x, vel.y, 0);
+        int velocity_sign = glm::sign(glm::dot(vel_2D, heading));
+        float signed_speed = velocity_sign * glm::length(vel_2D);
+
+        wheel_rot -= dt * signed_speed;
+        wheel_FL->rotation = glm::angleAxis(steer, glm::vec3(0, 0, 1)) * glm::angleAxis(wheel_rot, glm::vec3(1, 0, 0));
+        wheel_FR->rotation = glm::angleAxis(steer, glm::vec3(0, 0, 1)) * glm::angleAxis(wheel_rot, glm::vec3(1, 0, 0));
+        // these (rear) wheels are not on a z-axis rotation
+        wheel_BL->rotation = glm::angleAxis(wheel_rot, glm::vec3(1, 0, 0));
+        wheel_BR->rotation = glm::angleAxis(wheel_rot, glm::vec3(1, 0, 0));
 
         if (pos.z <= 0) { // ground update
             // inspiration for this physics update was taken from this code:
             // https://github.com/winstxnhdw/KinematicBicycleModel
-
-            // create 3D acceleration vector
-            auto heading = get_heading();
-            accel = heading * (throttle_force * throttle - brake_force * brake) + glm::vec3(0, 0, accel.z);
-
-            // compute forward speed
-            glm::vec3 vel_2D = glm::vec3(vel.x, vel.y, 0);
-            int velocity_sign = glm::sign(glm::dot(vel_2D, heading));
-            float signed_speed = velocity_sign * glm::length(vel_2D);
 
             // compute friction
             float friction = signed_speed * (c_r + c_a * signed_speed);
@@ -248,6 +246,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     float c_r = 0.02f; // coefficient of resistance
     float c_a = 0.25f; // drag coefficient
     float woggle = 0;
+    float wheel_rot = 0;
 
     float health = 2; // maximum number of bumps
 
