@@ -248,7 +248,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     // constants
     float wheel_diameter_m = 1.0f;
     float c_r = 0.02f; // coefficient of resistance
-    float c_a = 0.25f; // drag coefficient
+    float c_a = 0.025f; // drag coefficient
     float woggle = 0;
     float wheel_rot = 0;
 
