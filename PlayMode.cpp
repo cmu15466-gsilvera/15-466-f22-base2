@@ -185,7 +185,7 @@ void PlayMode::update(float elapsed)
         glm::vec3 heading = FWV->get_heading();
         for (FourWheeledVehicle* otherFWV : vehicle_map) {
             bool was_collision = (FWV->bounds.collides_with(otherFWV->bounds) || otherFWV->bounds.collides_with(FWV->bounds));
-            if (otherFWV != FWV && was_collision) {
+            if (otherFWV != FWV && was_collision && time > 1) {
                 FWV->bounds.collided = true;
 
                 glm::vec3 dir = FWV->pos - otherFWV->pos; // scaled by distance
@@ -348,16 +348,14 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
 
         } else {
             DrawLines lines(projection, false);
-            constexpr float H = 0.09f;
-            lines.draw_text("Health: " + std::to_string(Player->health),
-                glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-                glm::u8vec4(0x00, 0x00, 0x00, 0xF0));
+            constexpr float H = 0.2f;
             float ofs = 2.0f / drawable_size.y;
-            lines.draw_text("Health: " + std::to_string(Player->health),
+            bool bWasHit = Player->timeLastHit > time - deltaHit;
+            glm::u8vec4 text_colour = bWasHit ? glm::u8vec4(0xff, 0x00, 0x00, 0xf0) : glm::u8vec4(0xff, 0xff, 0xff, 0xf0);
+            lines.draw_text("Health: " + std::to_string(int(Player->health)),
                 glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + +0.1f * H + ofs, 0.0),
                 glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+                text_colour);
         }
     }
 
