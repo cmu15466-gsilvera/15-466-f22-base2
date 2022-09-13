@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# car.BONK
 
-Author: (TODO: your name)
+Author: Gustavo Silvera
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: Bonk the other cars, don't get bonked!
 
 Screen Shot:
 
