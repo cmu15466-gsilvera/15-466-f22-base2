@@ -252,6 +252,7 @@ struct FourWheeledVehicle : PhysicalAssetMesh {
     float woggle = 0;
     float wheel_rot = 0;
 
+    float timeLastHit = -1e5; // when was the player last hit? (init to negative inf)
     float health = 2; // maximum number of bumps
 
     // control scheme inputs

@@ -55,6 +55,16 @@ PlayMode::PlayMode()
         "car.004",
         "car.005",
         "car.006",
+        "car.007",
+        "car.008",
+        "car.009",
+        "car.010",
+        "car.011",
+        "car.012",
+        "car.013",
+        "car.014",
+        "car.015",
+        "car.016",
         /// TODO: add cars in code, not model
     };
 
@@ -151,6 +161,7 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 void PlayMode::update(float elapsed)
 {
 
+    time += elapsed;
     if (elapsed == 0) {
         // std::cout << "zero elapsed time?" << std::endl;
         return;
@@ -180,10 +191,13 @@ void PlayMode::update(float elapsed)
                 glm::vec3 dir = FWV->pos - otherFWV->pos; // scaled by distance
                 FWV->collision_force = 0.5f * dir / elapsed;
                 // check if got bumped
-                if (glm::dot(dir, heading) > 0) {
+                if (glm::dot(dir, heading) > 0 && time > FWV->timeLastHit + deltaHit) {
                     FWV->health--;
                     if (FWV->health == 0)
                         FWV->die();
+                    FWV->timeLastHit = time;
+                    if (FWV->bIsPlayer)
+                        std::cout << "Ouch!!!" << std::endl; // got hit
                 }
                 break;
             }

@@ -31,6 +31,9 @@ struct PlayMode : Mode {
 
     bool justJumped = false;
     bool bDrawBoundingBoxes = false;
+    bool bCanGetHit = true;
+    static constexpr float deltaHit = 0.25; // minimum time between consecutive hits
+    float time = 0; // time of the world
 
     // local copy of the game scene (so code can change it during gameplay):
     Scene scene;
